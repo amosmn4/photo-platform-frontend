@@ -1,0 +1,50 @@
+import React, { useState } from 'react';
+import { GalleryPhoto } from '../types';
+import { frameNumber } from '../utils/format';
+
+interface Props {
+  photo: GalleryPhoto;
+  index: number;
+  onOpen: (photo: GalleryPhoto, index: number) => void;
+}
+
+/**
+ * Grid cell. Deliberately loads only `thumbnailUrl` (320px webp) — never
+ * medium/large/original — per the "don't serve originals to the grid"
+ * rule in the architecture doc. `loading="lazy"` + `decoding="async"` defer
+ * work for offscreen images; a skeleton fills the aspect-ratio box until
+ * the browser reports the image loaded, so the grid never jumps as photos
+ * pop in (this also lets the browser compute layout before pixels arrive,
+ * since width/height are always set from the photo's known aspect ratio).
+ */
+export function PhotoThumbnail({ photo, index, onOpen }: Props) {
+  const [loaded, setLoaded] = useState(false);
+  const aspect = photo.width && photo.height ? photo.width / photo.height : 1;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onOpen(photo, index)}
+      className="group relative block w-full overflow-hidden rounded-card bg-hairline/40 focus-visible:outline-mark"
+      style={{ aspectRatio: aspect }}
+      aria-label={`Open photo ${frameNumber(index)}`}
+    >
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-hairline/60" />}
+      {photo.thumbnailUrl && (
+        <img
+          src={photo.thumbnailUrl}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          className={`h-full w-full object-cover transition-opacity duration-300 group-hover:opacity-90 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+      )}
+      <span className="frame-tag pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 py-0.5 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
+        {frameNumber(index)}
+      </span>
+    </button>
+  );
+}
