@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AccessTokenSummary } from '../types';
+import { ConfirmDialog } from './ConfirmDialog';
 
 interface Props {
   label: string;
@@ -7,15 +8,38 @@ interface Props {
   galleryUrl: string;
   token: AccessTokenSummary;
   onRevoke?: () => void;
+  onDelete?: () => void;
 }
 
-export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke }: Props) {
+export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke, onDelete }: Props) {
   const [copied, setCopied] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function copyLink() {
     await navigator.clipboard.writeText(galleryUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
+  }
+
+  async function shareLink() {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: label, url: galleryUrl });
+      } catch {
+        // user dismissed the share sheet — not an error
+      }
+      return;
+    }
+    // No Web Share API (most desktop browsers) — fall back to clipboard.
+    await navigator.clipboard.writeText(galleryUrl);
+    setShared(true);
+    setTimeout(() => setShared(false), 1500);
+  }
+
+  function confirmDelete() {
+    setConfirmingDelete(false);
+    onDelete?.();
   }
 
   return (
@@ -41,9 +65,12 @@ export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke }: Props)
             )}
           </div>
         </div>
-        <div className="mt-3 flex gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <button type="button" onClick={copyLink} className="btn-secondary text-xs">
             {copied ? 'Copied' : 'Copy link'}
+          </button>
+          <button type="button" onClick={shareLink} className="btn-secondary text-xs">
+            {shared ? 'Copied' : 'Share'}
           </button>
           <a href={qrDataUrl} download={`${label}.png`} className="btn-secondary text-xs">
             Download QR
@@ -53,8 +80,22 @@ export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke }: Props)
               Revoke
             </button>
           )}
+          {onDelete && (
+            <button type="button" onClick={() => setConfirmingDelete(true)} className="btn-ghost text-xs text-mark">
+              Delete
+            </button>
+          )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmingDelete}
+        title={`Delete "${label}"?`}
+        message="This cannot be undone — the QR code will stop working immediately."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </div>
   );
 }

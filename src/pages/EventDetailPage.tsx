@@ -5,11 +5,13 @@ import { UploadManager } from '../components/UploadManager';
 import { QRCard } from '../components/QRCard';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { Lightbox } from '../components/Lightbox';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useGallery } from '../hooks/useGallery';
 import { eventsApi } from '../api/events';
-import { EventSummary, AccessTokenSummary, IssuedAccess, ProcessingSummary } from '../types';
+import { EventSummary, AccessTokenSummary, IssuedAccess, ProcessingSummary, GalleryPhoto } from '../types';
 
 type Tab = 'upload' | 'access' | 'photos';
+const PAGE_SIZE_OPTIONS = [20, 40, 60, 100, 150];
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -20,6 +22,12 @@ export function EventDetailPage() {
   const [summary, setSummary] = useState<ProcessingSummary | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
+  const [pageSize, setPageSize] = useState(60);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmingRemoveSelected, setConfirmingRemoveSelected] = useState(false);
+  const [confirmingDeleteTokenId, setConfirmingDeleteTokenId] = useState<string | null>(null);
 
   const loadEvent = useCallback(async () => {
     if (!eventId) return;
@@ -56,10 +64,66 @@ export function EventDetailPage() {
   }, [summary, loadSummary]);
 
   const fetchPage = useCallback(
-    (cursor?: string) => eventsApi.listPhotos(eventId!, cursor),
-    [eventId],
+    (cursor?: string) => eventsApi.listPhotos(eventId!, cursor, pageSize),
+    [eventId, pageSize],
   );
-  const gallery = useGallery({ fetchPage, resetKey: eventId });
+  const gallery = useGallery({ fetchPage, resetKey: `${eventId}-${pageSize}` });
+
+  function toggleSelect(photo: GalleryPhoto) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(photo.id)) next.delete(photo.id);
+      else next.add(photo.id);
+      return next;
+    });
+  }
+
+  function cancelSelection() {
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }
+
+  async function downloadSelected() {
+    if (!eventId || selectedIds.size === 0) return;
+    setBulkBusy(true);
+    try {
+      for (const photoId of selectedIds) {
+        const { url } = await eventsApi.getPhotoDownloadUrl(eventId, photoId);
+        const a = document.createElement('a');
+        a.href = url;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        // Stagger so the browser doesn't treat a burst of simultaneous
+        // downloads as a popup flood and block the later ones.
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function removeSelected() {
+    if (!eventId || selectedIds.size === 0) return;
+    setConfirmingRemoveSelected(true);
+  }
+
+  async function confirmRemoveSelected() {
+    setConfirmingRemoveSelected(false);
+    if (!eventId) return;
+    setBulkBusy(true);
+    try {
+      for (const photoId of selectedIds) {
+        await eventsApi.deletePhoto(eventId, photoId);
+      }
+      cancelSelection();
+      await gallery.reload();
+      await loadEvent();
+    } finally {
+      setBulkBusy(false);
+    }
+  }
 
   async function issueNewToken() {
     if (!eventId) return;
@@ -71,6 +135,17 @@ export function EventDetailPage() {
   async function revokeToken(tokenId: string) {
     if (!eventId) return;
     await eventsApi.revokeToken(eventId, tokenId, 'Revoked from dashboard');
+    await loadTokens();
+  }
+
+  async function deleteToken(tokenId: string) {
+    if (!eventId) return;
+    await eventsApi.deleteToken(eventId, tokenId);
+    setIssuedByTokenId((prev) => {
+      const next = { ...prev };
+      delete next[tokenId];
+      return next;
+    });
     await loadTokens();
   }
 
@@ -90,7 +165,7 @@ export function EventDetailPage() {
       <div className="min-h-screen">
         <Navbar />
         <main className="mx-auto max-w-6xl px-4 py-8">
-          <Link to="/" className="btn-ghost text-sm text-ink-faint hover:text-ink">
+          <Link to="/dashboard" className="btn-ghost text-sm text-ink-faint hover:text-ink">
             ← Back to events
           </Link>
           <p className="mt-4 text-ink-faint">Loading event…</p>
@@ -105,7 +180,7 @@ export function EventDetailPage() {
     <div className="min-h-screen">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <Link to="/" className="btn-ghost text-sm text-ink-faint hover:text-ink">
+        <Link to="/dashboard" className="btn-ghost text-sm text-ink-faint hover:text-ink">
           ← Back to events
         </Link>
         <div className="mt-4 flex items-start justify-between gap-4">
@@ -178,6 +253,7 @@ export function EventDetailPage() {
                       galleryUrl={issued.galleryUrl}
                       token={token}
                       onRevoke={() => revokeToken(token.id)}
+                      onDelete={() => deleteToken(token.id)}
                     />
                   ) : (
                     <div key={token.id} className="card p-4">
@@ -196,11 +272,20 @@ export function EventDetailPage() {
                         The QR image is only shown once, right when it's generated. Revoke and issue a new one if
                         it's been lost.
                       </p>
-                      {token.status === 'active' && (
-                        <button type="button" className="btn-ghost mt-2 text-xs text-mark" onClick={() => revokeToken(token.id)}>
-                          Revoke
+                      <div className="mt-2 flex gap-2">
+                        {token.status === 'active' && (
+                          <button type="button" className="btn-ghost text-xs text-mark" onClick={() => revokeToken(token.id)}>
+                            Revoke
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="btn-ghost text-xs text-mark"
+                          onClick={() => setConfirmingDeleteTokenId(token.id)}
+                        >
+                          Delete
                         </button>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -210,6 +295,53 @@ export function EventDetailPage() {
 
           {tab === 'photos' && (
             <>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="frame-tag text-ink-faint" htmlFor="pageSize">Show</label>
+                  <select
+                    id="pageSize"
+                    className="input w-auto py-1.5 text-sm"
+                    value={pageSize}
+                    onChange={(e) => setPageSize(Number(e.target.value))}
+                  >
+                    {PAGE_SIZE_OPTIONS.map((n) => (
+                      <option key={n} value={n}>
+                        {n} per page
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {!selecting ? (
+                  <button type="button" className="btn-secondary text-sm" onClick={() => setSelecting(true)}>
+                    Select photos
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="frame-tag text-ink-faint">{selectedIds.size} selected</span>
+                    <button
+                      type="button"
+                      className="btn-secondary text-sm"
+                      disabled={selectedIds.size === 0 || bulkBusy}
+                      onClick={downloadSelected}
+                    >
+                      {bulkBusy ? 'Working…' : 'Download'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-ghost text-sm text-mark"
+                      disabled={selectedIds.size === 0 || bulkBusy}
+                      onClick={removeSelected}
+                    >
+                      Remove
+                    </button>
+                    <button type="button" className="btn-ghost text-sm" onClick={cancelSelection}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <PhotoGrid
                 items={gallery.items}
                 loading={gallery.loading}
@@ -218,6 +350,9 @@ export function EventDetailPage() {
                 onLoadMore={gallery.loadMore}
                 onOpen={(_photo, i) => setLightboxIndex(i)}
                 emptyLabel="No processed photos yet"
+                selecting={selecting}
+                selectedIds={selectedIds}
+                onToggleSelect={toggleSelect}
               />
               {lightboxIndex !== null && (
                 <Lightbox
@@ -231,6 +366,27 @@ export function EventDetailPage() {
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={confirmingRemoveSelected}
+        title={`Remove ${selectedIds.size} photo(s)?`}
+        message="This cannot be undone."
+        confirmLabel="Remove"
+        onConfirm={confirmRemoveSelected}
+        onCancel={() => setConfirmingRemoveSelected(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmingDeleteTokenId !== null}
+        title={`Delete "${tokens.find((t) => t.id === confirmingDeleteTokenId)?.label ?? 'this QR'}"?`}
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (confirmingDeleteTokenId) deleteToken(confirmingDeleteTokenId);
+          setConfirmingDeleteTokenId(null);
+        }}
+        onCancel={() => setConfirmingDeleteTokenId(null)}
+      />
     </div>
   );
 }

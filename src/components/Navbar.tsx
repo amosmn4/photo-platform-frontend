@@ -10,7 +10,7 @@ export function Navbar() {
   return (
     <header className="border-b border-hairline bg-paper-raised">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/" className="font-display text-lg font-semibold tracking-tight text-ink">
+        <Link to="/dashboard" className="font-display text-lg font-semibold tracking-tight text-ink">
           {config.appName}
         </Link>
         {user && (

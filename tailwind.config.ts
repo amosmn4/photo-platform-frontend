@@ -1,24 +1,13 @@
 import type { Config } from 'tailwindcss';
 
-/**
- * Design language: a photo lab's light table, not a generic SaaS dashboard.
- *   - `paper`   the cool-white surface of a lightbox/light table
- *   - `ink`     near-black text, like grease pencil on a contact sheet
- *   - `mark`    the red grease-pencil mark a photographer circles a keeper
- *               frame with — used for primary actions and selection
- *   - `safelight` a warm amber, used sparingly for in-progress/processing
- *               states (echoing a darkroom safelight)
- * Frame numbers, EXIF, timestamps and QR/token values are always set in the
- * monospace `mono` face — like the numbers printed along a film strip's
- * sprocket edge — so metadata is visually distinct from editorial content.
- */
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
         paper: {
-          DEFAULT: '#EEEDE8',
+          DEFAULT: '#FAFAFA',
           raised: '#FFFFFF',
         },
         ink: {
@@ -42,7 +31,7 @@ export default {
         },
       },
       fontFamily: {
-        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        display: ['"Inter"', 'system-ui', 'sans-serif'],
         body: ['"Inter"', 'system-ui', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace'],
       },

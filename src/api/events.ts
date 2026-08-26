@@ -41,12 +41,20 @@ export const eventsApi = {
   revokeToken: (eventId: string, tokenId: string, reason?: string) =>
     api.delete<void>(`/events/${eventId}/access-tokens/${tokenId}`, reason ? { reason } : undefined),
 
+  deleteToken: (eventId: string, tokenId: string) =>
+    api.delete<void>(`/events/${eventId}/access-tokens/${tokenId}/purge`),
+
   listPhotos: (eventId: string, cursor?: string, limit = 60, sessionId?: string) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor) params.set('cursor', cursor);
     if (sessionId) params.set('sessionId', sessionId);
     return api.get<GalleryPage>(`/events/${eventId}/photos?${params.toString()}`);
   },
+
+  getPhotoDownloadUrl: (eventId: string, photoId: string, variant: 'original' | 'large' | 'medium' = 'original') =>
+    api.get<{ url: string }>(`/events/${eventId}/photos/${photoId}/download?variant=${variant}`),
+
+  deletePhoto: (eventId: string, photoId: string) => api.delete<void>(`/events/${eventId}/photos/${photoId}`),
 };
 
 export const uploadApi = {

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { ApiClientError } from '../api/client';
 import { config } from '../config';
+import { PasswordInput } from '../components/PasswordInput';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -18,7 +19,7 @@ export function LoginPage() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -29,13 +30,9 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="btn-ghost mb-4 text-sm text-ink-faint hover:text-ink"
-        >
+        <Link to="/" className="btn-ghost mb-4 inline-flex text-sm text-ink-faint hover:text-ink">
           ← Back
-        </button>
+        </Link>
         <h1 className="mb-1 text-center font-display text-2xl font-semibold text-ink">{config.appName}</h1>
         <p className="mb-8 text-center text-sm text-ink-faint">Sign in to your photographer dashboard.</p>
 
@@ -51,17 +48,14 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div>
-            <label className="label" htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              required
-              className="input"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+          <PasswordInput
+            id="password"
+            label="Password"
+            required
+            autoComplete="current-password"
+            value={password}
+            onChange={setPassword}
+          />
           {error && <p className="text-sm text-mark">{error}</p>}
           <button type="submit" className="btn-primary w-full" disabled={submitting}>
             {submitting ? 'Signing in…' : 'Sign in'}

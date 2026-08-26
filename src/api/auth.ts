@@ -8,7 +8,17 @@ interface LoginResponse {
 
 export const authApi = {
   async register(input: { email: string; password: string; fullName: string; businessName?: string }) {
-    return api.post<{ user: PublicUser }>('/auth/register', input);
+    return api.post<{ user: PublicUser; devVerificationCode?: string }>('/auth/register', input);
+  },
+
+  async verifyEmail(input: { email: string; code: string }) {
+    const res = await api.post<LoginResponse>('/auth/verify-email', input);
+    setAccessToken(res.accessToken);
+    return res.user;
+  },
+
+  async resendVerification(email: string) {
+    return api.post<{ devVerificationCode?: string }>('/auth/resend-verification', { email });
   },
 
   async login(input: { email: string; password: string }) {

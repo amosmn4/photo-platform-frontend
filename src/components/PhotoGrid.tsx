@@ -11,9 +11,23 @@ interface Props {
   onLoadMore: () => void;
   onOpen: (photo: GalleryPhoto, index: number) => void;
   emptyLabel?: string;
+  selecting?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (photo: GalleryPhoto) => void;
 }
 
-export function PhotoGrid({ items, loading, loadingMore, hasMore, onLoadMore, onOpen, emptyLabel }: Props) {
+export function PhotoGrid({
+  items,
+  loading,
+  loadingMore,
+  hasMore,
+  onLoadMore,
+  onOpen,
+  emptyLabel,
+  selecting,
+  selectedIds,
+  onToggleSelect,
+}: Props) {
   const sentinelRef = useInfiniteScrollTrigger(onLoadMore, hasMore && !loading);
 
   if (loading) {
@@ -39,7 +53,15 @@ export function PhotoGrid({ items, loading, loadingMore, hasMore, onLoadMore, on
     <div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
         {items.map((photo, i) => (
-          <PhotoThumbnail key={photo.id} photo={photo} index={i} onOpen={onOpen} />
+          <PhotoThumbnail
+            key={photo.id}
+            photo={photo}
+            index={i}
+            onOpen={onOpen}
+            selecting={selecting}
+            selected={selectedIds?.has(photo.id)}
+            onToggleSelect={onToggleSelect}
+          />
         ))}
       </div>
 

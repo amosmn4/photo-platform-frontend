@@ -6,7 +6,14 @@ interface AuthContextValue {
   user: PublicUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (input: { email: string; password: string; fullName: string; businessName?: string }) => Promise<void>;
+  register: (input: {
+    email: string;
+    password: string;
+    fullName: string;
+    businessName?: string;
+  }) => Promise<{ devVerificationCode?: string }>;
+  verifyEmail: (email: string, code: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<{ devVerificationCode?: string }>;
   logout: () => Promise<void>;
 }
 
@@ -33,11 +40,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(
     async (input: { email: string; password: string; fullName: string; businessName?: string }) => {
-      await authApi.register(input);
-      await login(input.email, input.password);
+      const res = await authApi.register(input);
+      return { devVerificationCode: res.devVerificationCode };
     },
-    [login],
+    [],
   );
+
+  const verifyEmail = useCallback(async (email: string, code: string) => {
+    const u = await authApi.verifyEmail({ email, code });
+    setUser(u);
+  }, []);
+
+  const resendVerification = useCallback(async (email: string) => {
+    const res = await authApi.resendVerification(email);
+    return { devVerificationCode: res.devVerificationCode };
+  }, []);
 
   const logout = useCallback(async () => {
     await authApi.logout();
@@ -45,7 +62,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, register, verifyEmail, resendVerification, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 
