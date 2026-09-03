@@ -6,7 +6,7 @@ export function formatBytes(bytes: number | string): string {
   return `${(n / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
 }
 
-/** Frame-number style formatting for photo index — the film-strip motif. */
+// Frame-number style formatting for photo index — the film-strip motif.
 export function frameNumber(index: number): string {
   return `N\u00b0 ${String(index + 1).padStart(4, '0')}`;
 }

@@ -63,11 +63,6 @@ export function EventDetailPage() {
     loadSummary();
   }, [loadEvent, loadTokens, loadSummary]);
 
-  // Poll processing status while anything is still uploaded/processing —
-  // this is the data source for the "3,421 / 5,000 processed" bar. Gives up
-  // after repeated consecutive failures (server down, request timing out,
-  // etc.) instead of retrying forever with nothing shown to the user — see
-  // summaryError / retrySummary below for how polling resumes.
   useEffect(() => {
     if (!summary) return;
     const pending = summary.uploaded + summary.processing;
@@ -121,8 +116,6 @@ export function EventDetailPage() {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        // Stagger so the browser doesn't treat a burst of simultaneous
-        // downloads as a popup flood and block the later ones.
         await new Promise((r) => setTimeout(r, 400));
       }
     } finally {

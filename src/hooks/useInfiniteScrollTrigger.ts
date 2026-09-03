@@ -1,12 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-/**
- * Fires `onIntersect` when the returned ref's element scrolls into view.
- * Used as the "load next page" trigger for the gallery grid: a sentinel div
- * sits after the last row of photos, and crossing into the viewport
- * triggers the next cursor-paginated fetch — the standard, cheap way to do
- * infinite scroll without a scroll-position listener.
- */
+// Fires onIntersect when the sentinel ref scrolls into view, triggering infinite-scroll pagination.
 export function useInfiniteScrollTrigger(onIntersect: () => void, enabled: boolean) {
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
@@ -19,7 +13,7 @@ export function useInfiniteScrollTrigger(onIntersect: () => void, enabled: boole
       (entries) => {
         if (entries[0]?.isIntersecting) onIntersect();
       },
-      { rootMargin: '800px 0px' }, // start loading well before the user hits bottom
+      { rootMargin: '800px 0px' },
     );
     observer.observe(el);
     return () => observer.disconnect();

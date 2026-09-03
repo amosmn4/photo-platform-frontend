@@ -10,13 +10,7 @@ interface Props {
   onDownload?: (photo: GalleryPhoto) => void;
 }
 
-/**
- * Progressive loading: shows the already-cached thumbnail immediately (no
- * blank flash), swaps in `mediumUrl` as soon as it loads, and only fetches
- * `largeUrl` after that — never the multi-megabyte original just to look at
- * a photo. This mirrors the architecture doc's "thumbnail -> medium/large ->
- * original only on download" rule.
- */
+// Progressively loads thumbnail, then medium, then large — never the original just to view a photo.
 export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: Props) {
   const photo = photos[index];
   const [largeLoaded, setLargeLoaded] = useState(false);
@@ -93,7 +87,6 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
         )}
 
         <div className="relative max-h-full max-w-full">
-          {/* Base layer: medium (loads fast, likely already primed) */}
           {photo.mediumUrl && (
             <img
               src={photo.mediumUrl}
@@ -101,7 +94,6 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
               className="max-h-[85vh] max-w-[92vw] rounded-sm object-contain"
             />
           )}
-          {/* Sharpened layer: large, cross-fades in once ready */}
           {photo.largeUrl && (
             <img
               src={photo.largeUrl}

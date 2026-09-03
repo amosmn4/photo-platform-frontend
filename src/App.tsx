@@ -11,12 +11,10 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 export default function App() {
   return (
     <Routes>
-      {/* Public marketing site */}
       <Route path="/" element={<HomePage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
 
-      {/* Photographer-facing, JWT-protected */}
       <Route
         path="/dashboard"
         element={
@@ -34,7 +32,6 @@ export default function App() {
         }
       />
 
-      {/* Public, QR-token-gated — no login, this is what a scanned QR opens */}
       <Route path="/g/:token" element={<PublicGalleryPage />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

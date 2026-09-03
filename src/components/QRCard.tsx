@@ -27,11 +27,9 @@ export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke, onDelete
       try {
         await navigator.share({ title: label, url: galleryUrl });
       } catch {
-        // user dismissed the share sheet — not an error
       }
       return;
     }
-    // No Web Share API (most desktop browsers) — fall back to clipboard.
     await navigator.clipboard.writeText(galleryUrl);
     setShared(true);
     setTimeout(() => setShared(false), 1500);

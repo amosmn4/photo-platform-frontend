@@ -3,11 +3,7 @@ export interface PasswordStrength {
   label: string;
 }
 
-/**
- * Lightweight heuristic strength meter — no external dependency (zxcvbn
- * etc.) since this is the only place in the app that would need one.
- * Rewards length and character variety, not just a checklist of classes.
- */
+// Lightweight heuristic strength meter — no external dependency since this is the only usage site.
 export function getPasswordStrength(password: string): PasswordStrength {
   let score = 0;
   if (password.length >= 8) score++;

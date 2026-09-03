@@ -11,15 +11,7 @@ interface Props {
   onToggleSelect?: (photo: GalleryPhoto) => void;
 }
 
-/**
- * Grid cell. Deliberately loads only `thumbnailUrl` (320px webp) — never
- * medium/large/original — per the "don't serve originals to the grid"
- * rule in the architecture doc. `loading="lazy"` + `decoding="async"` defer
- * work for offscreen images; a skeleton fills the aspect-ratio box until
- * the browser reports the image loaded, so the grid never jumps as photos
- * pop in (this also lets the browser compute layout before pixels arrive,
- * since width/height are always set from the photo's known aspect ratio).
- */
+// Grid cell: loads only thumbnailUrl, never larger sizes, to keep the grid lightweight.
 export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect }: Props) {
   const [loaded, setLoaded] = useState(false);
   const aspect = photo.width && photo.height ? photo.width / photo.height : 1;

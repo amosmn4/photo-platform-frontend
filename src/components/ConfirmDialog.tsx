@@ -10,8 +10,7 @@ interface Props {
   onCancel: () => void;
 }
 
-/** App-styled replacement for window.confirm() — used anywhere a destructive
- *  action (delete/remove) needs a yes/no gate before it runs. */
+// App-styled replacement for window.confirm() — used anywhere a destructive action needs a yes/no gate.
 export function ConfirmDialog({
   open,
   title,

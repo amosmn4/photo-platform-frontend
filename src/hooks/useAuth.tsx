@@ -23,8 +23,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // On first load, try to silently resume a session from the httpOnly
-  // refresh cookie (e.g. after a page refresh) before rendering protected routes.
   useEffect(() => {
     authApi
       .refresh()

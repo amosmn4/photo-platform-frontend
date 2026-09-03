@@ -18,10 +18,6 @@ export function getAccessToken() {
   return accessToken;
 }
 
-// The access token is short-lived (15min by default — see JWT_ACCESS_TTL) so
-// any session left open longer than that needs a silent refresh, not a hard
-// failure. Concurrent 401s share one in-flight refresh instead of each
-// firing their own.
 let refreshPromise: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
@@ -48,17 +44,7 @@ async function tryRefresh(): Promise<boolean> {
   return refreshPromise;
 }
 
-/**
- * Every network call in the app goes through this function. It:
- *  - attaches the JWT if we have one
- *  - always sends cookies (refresh token) for same-origin/CORS-credentialed calls
- *  - on a 401, silently refreshes the access token (via the httpOnly refresh
- *    cookie) and retries once before giving up — otherwise a long-open tab
- *    starts failing every request the moment the access token expires
- *  - normalizes error responses into ApiClientError
- *  - JSON-parses only when there's a JSON body (204s, redirects to signed
- *    URLs, etc. are common in this app)
- */
+// Silently refreshes the access token and retries once on a 401 before failing.
 async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
@@ -97,11 +83,7 @@ export const api = {
     request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
 };
 
-/**
- * Direct-to-storage upload — deliberately bypasses `api`/the app server
- * entirely (product doc: originals never transit the backend). Reports
- * progress via XHR since fetch() doesn't expose upload progress events.
- */
+// Deliberately bypasses the app server — originals upload straight to storage; uses XHR for progress.
 export function putFileToPresignedUrl(
   url: string,
   file: File,
