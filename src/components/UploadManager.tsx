@@ -5,7 +5,7 @@ import { sha256Hex } from '../utils/checksum';
 
 interface FileState {
   file: File;
-  progress: number; // 0-1, upload progress
+  progress: number;
   status: 'queued' | 'uploading' | 'confirming' | 'done' | 'error';
   error?: string;
 }
@@ -16,16 +16,9 @@ interface Props {
   onAllUploaded?: () => void;
 }
 
-/**
- * Implements the async bulk-upload flow from the architecture doc: request
- * presigned URLs for the whole batch up front, PUT files directly to
- * storage in parallel (bounded concurrency), confirm each as it lands, and
- * surface a live "X / N uploaded" progress bar the whole time — the
- * photographer can navigate away and the batch keeps going server-side
- * once files are confirmed (processing continues independent of this tab).
- */
 const CONCURRENCY = 4;
 
+// Uploads files directly to storage in parallel with bounded concurrency; continues after tab closes.
 export function UploadManager({ eventId, onBatchStarted, onAllUploaded }: Props) {
   const [files, setFiles] = useState<FileState[]>([]);
   const [isUploading, setIsUploading] = useState(false);

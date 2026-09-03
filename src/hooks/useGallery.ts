@@ -3,16 +3,10 @@ import { GalleryPhoto } from '../types';
 
 interface UseGalleryOptions {
   fetchPage: (cursor?: string) => Promise<{ items: GalleryPhoto[]; nextCursor: string | null }>;
-  /** Bump this to force a full reset (e.g. switching session filter). */
   resetKey?: string;
 }
 
-/**
- * Owns the accumulated photo list + cursor state for any keyset-paginated
- * gallery (public or photographer-management view — both backend endpoints
- * share the same cursor shape, see backend/API.md "Pagination"). Isolated
- * from rendering concerns so PhotoGrid stays a pure presentational component.
- */
+// Owns paginated photo list and cursor state, kept separate from rendering for a pure PhotoGrid.
 export function useGallery({ fetchPage, resetKey }: UseGalleryOptions) {
   const [items, setItems] = useState<GalleryPhoto[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);

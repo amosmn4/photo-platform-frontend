@@ -11,7 +11,7 @@ interface Props {
   placeholder?: string;
 }
 
-/** Password field with a Show/Hide toggle — used anywhere a password is entered. */
+// Password field with a Show/Hide toggle — used anywhere a password is entered.
 export function PasswordInput({ id, label, value, onChange, autoComplete, required, minLength, placeholder }: Props) {
   const [visible, setVisible] = useState(false);
 

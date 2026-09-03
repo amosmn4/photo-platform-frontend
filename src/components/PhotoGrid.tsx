@@ -65,7 +65,6 @@ export function PhotoGrid({
         ))}
       </div>
 
-      {/* Sentinel for infinite scroll — see useInfiniteScrollTrigger */}
       <div ref={sentinelRef} className="h-1" />
 
       {loadingMore && (
