@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ApiClientError } from '../api/client';
 import { config } from '../config';
 import { PasswordInput } from '../components/PasswordInput';
+import { Footer } from '../components/Footer';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -18,8 +19,8 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const user = await login(email, password);
+      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Something went wrong. Try again.');
     } finally {
@@ -28,7 +29,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <Link to="/" className="btn-ghost mb-4 inline-flex text-sm text-ink-faint hover:text-ink">
           ← Back
@@ -69,6 +71,8 @@ export function LoginPage() {
           </Link>
         </p>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

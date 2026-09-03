@@ -47,7 +47,8 @@ async function tryRefresh(): Promise<boolean> {
 // Silently refreshes the access token and retries once on a 401 before failing.
 async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const headers = new Headers(init.headers);
-  headers.set('Content-Type', 'application/json');
+  // Leave Content-Type unset for FormData — the browser fills in the multipart boundary itself.
+  if (!(init.body instanceof FormData)) headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
 
   const res = await fetch(`${config.apiBaseUrl}${path}`, {
@@ -81,6 +82,7 @@ export const api = {
     request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(path: string, body?: unknown) =>
     request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
+  postForm: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 };
 
 // Deliberately bypasses the app server — originals upload straight to storage; uses XHR for progress.

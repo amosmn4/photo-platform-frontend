@@ -5,6 +5,7 @@ import { ApiClientError } from '../api/client';
 import { config } from '../config';
 import { PasswordInput } from '../components/PasswordInput';
 import { PasswordStrengthMeter } from '../components/PasswordStrengthMeter';
+import { Footer } from '../components/Footer';
 
 type Step = 'form' | 'verify';
 
@@ -77,7 +78,8 @@ export function RegisterPage() {
 
   if (step === 'verify') {
     return (
-      <div className="flex min-h-screen items-center justify-center px-4 py-12">
+      <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <button
             type="button"
@@ -93,7 +95,7 @@ export function RegisterPage() {
 
           {devCode && (
             <div className="mb-4 rounded-card border border-safelight bg-safelight-tint p-3 text-center text-sm text-ink">
-              No email service is configured in this environment — dev code: <span className="font-mono font-semibold">{devCode}</span>
+              No email service is configured in this environment. Dev code: <span className="font-mono font-semibold">{devCode}</span>
             </div>
           )}
 
@@ -124,11 +126,14 @@ export function RegisterPage() {
           </p>
         </div>
       </div>
+      <Footer />
+      </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <button
           type="button"
@@ -191,6 +196,8 @@ export function RegisterPage() {
           </Link>
         </p>
       </div>
+      </div>
+      <Footer />
     </div>
   );
 }

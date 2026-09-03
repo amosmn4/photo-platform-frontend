@@ -19,6 +19,31 @@ export interface EventSummary {
   photo_count: number;
   total_size_bytes: string;
   created_at: string;
+  coverImageUrl: string | null;
+}
+
+export interface SiteSettings {
+  logoUrl: string | null;
+  tagline: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  contactAddress: string | null;
+  socialLinks: Record<string, string>;
+}
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  full_name: string;
+  business_name: string | null;
+  phone: string | null;
+  role: 'photographer' | 'admin' | 'staff';
+  status: 'active' | 'suspended' | 'pending_verification';
+  storage_used_bytes: string;
+  storage_quota_bytes: string;
+  email_verified_at: string | null;
+  last_login_at: string | null;
+  created_at: string;
 }
 
 export interface PhotoSession {
