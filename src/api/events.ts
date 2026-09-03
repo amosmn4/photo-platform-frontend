@@ -23,6 +23,12 @@ export const eventsApi = {
 
   publish: (eventId: string) => api.post<void>(`/events/${eventId}/publish`),
 
+  uploadCover: (eventId: string, file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.postForm<{ event: EventSummary }>(`/events/${eventId}/cover`, form);
+  },
+
   processingSummary: (eventId: string) =>
     api.get<{ summary: ProcessingSummary }>(`/events/${eventId}/processing-summary`),
 

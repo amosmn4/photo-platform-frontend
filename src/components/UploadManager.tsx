@@ -99,7 +99,7 @@ export function UploadManager({ eventId, onBatchStarted, onAllUploaded }: Props)
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-display text-lg font-semibold text-ink">Upload photos</h3>
-          <p className="text-sm text-ink-faint">Select every file from this shoot — batches of thousands are fine.</p>
+          <p className="text-sm text-ink-faint">Select every file from this shoot. Batches of thousands are fine.</p>
         </div>
         <div className="flex gap-2">
           <input

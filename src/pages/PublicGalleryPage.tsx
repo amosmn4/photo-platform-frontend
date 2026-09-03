@@ -7,6 +7,7 @@ import { Lightbox } from '../components/Lightbox';
 import { GalleryPhoto, PhotoSession } from '../types';
 import { config } from '../config';
 import { ApiClientError } from '../api/client';
+import { Footer } from '../components/Footer';
 
 type Mode = 'browse' | 'find-by-time';
 
@@ -157,6 +158,7 @@ export function PublicGalleryPage() {
           />
         )}
       </main>
+      <Footer />
     </div>
   );
 }

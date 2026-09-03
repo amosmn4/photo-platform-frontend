@@ -31,6 +31,8 @@ export function EventDetailPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmingRemoveSelected, setConfirmingRemoveSelected] = useState(false);
   const [confirmingDeleteTokenId, setConfirmingDeleteTokenId] = useState<string | null>(null);
+  const [coverUploading, setCoverUploading] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const loadEvent = useCallback(async () => {
     if (!eventId) return;
@@ -179,6 +181,17 @@ export function EventDetailPage() {
     }
   }
 
+  async function handleCoverChange(file: File | null) {
+    if (!eventId || !file) return;
+    setCoverUploading(true);
+    try {
+      const { event: updated } = await eventsApi.uploadCover(eventId, file);
+      setEvent(updated);
+    } finally {
+      setCoverUploading(false);
+    }
+  }
+
   if (!event) {
     return (
       <div className="min-h-screen">
@@ -203,11 +216,35 @@ export function EventDetailPage() {
           ← Back to events
         </Link>
         <div className="mt-4 flex items-start justify-between gap-4">
-          <div>
-            <h1 className="font-display text-2xl font-semibold text-ink">{event.name}</h1>
-            <p className="frame-tag mt-1 text-ink-faint">
-              {event.photo_count} photos · {event.status}
-            </p>
+          <div className="flex items-center gap-3">
+            {event.coverImageUrl ? (
+              <img src={event.coverImageUrl} alt="" className="h-16 w-24 rounded-card object-cover" />
+            ) : (
+              <div className="flex h-16 w-24 items-center justify-center rounded-card bg-hairline/40 text-xs text-ink-faint">
+                No cover
+              </div>
+            )}
+            <div>
+              <h1 className="font-display text-2xl font-semibold text-ink">{event.name}</h1>
+              <p className="frame-tag mt-1 text-ink-faint">
+                {event.photo_count} photos · {event.status}
+              </p>
+              <input
+                ref={coverInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={(e) => handleCoverChange(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                className="mt-1 text-xs font-medium text-mark hover:text-mark-hover"
+                onClick={() => coverInputRef.current?.click()}
+                disabled={coverUploading}
+              >
+                {coverUploading ? 'Uploading…' : event.coverImageUrl ? 'Change cover image' : 'Add cover image'}
+              </button>
+            </div>
           </div>
           {event.status === 'draft' && (
             <button type="button" className="btn-primary shrink-0" onClick={handlePublish} disabled={publishing}>

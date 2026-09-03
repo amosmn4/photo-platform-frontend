@@ -79,7 +79,7 @@ export function PhotoGrid({
       )}
 
       {!hasMore && items.length > 0 && (
-        <p className="frame-tag mt-6 text-center text-ink-faint">— end of gallery — {items.length} photos —</p>
+        <p className="frame-tag mt-6 text-center text-ink-faint">· end of gallery · {items.length} photos ·</p>
       )}
     </div>
   );

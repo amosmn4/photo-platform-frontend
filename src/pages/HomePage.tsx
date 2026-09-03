@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { config } from '../config';
+import { Footer } from '../components/Footer';
 
 const FEATURES = [
   {
     title: 'Bulk upload, zero babysitting',
-    body: 'Drag in thousands of photos at once. Uploads go straight to storage with live per-batch progress — thumbnailing and EXIF run in the background.',
+    body: 'Drag in thousands of photos at once. Uploads go straight to storage with live per-batch progress. Thumbnailing and EXIF run in the background.',
   },
   {
     title: 'QR codes, printed and ready',
@@ -51,7 +52,7 @@ export function HomePage() {
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-ink-soft">
             Upload thousands of photos from a shoot, hand out a QR code, and let every guest find and download their
-            own photos — no accounts, no email chains, no USB drives.
+            own photos: no accounts, no email chains, no USB drives.
           </p>
           <div className="mt-8 flex items-center justify-center gap-3">
             <Link to="/register" className="btn-primary">Create your first event</Link>
@@ -105,17 +106,7 @@ export function HomePage() {
         </section>
       </main>
 
-      <footer className="border-t border-hairline">
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-ink-faint sm:flex-row">
-          <span>{config.appName}</span>
-          <div className="flex items-center gap-4">
-            <a href="#features" className="hover:text-ink">Features</a>
-            <a href="#how-it-works" className="hover:text-ink">How it works</a>
-            <Link to="/login" className="hover:text-ink">Sign in</Link>
-          </div>
-          <span className="frame-tag">© {new Date().getFullYear()}</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

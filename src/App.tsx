@@ -6,7 +6,9 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { EventDetailPage } from './pages/EventDetailPage';
 import { PublicGalleryPage } from './pages/PublicGalleryPage';
+import { AdminPage } from './pages/AdminPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { AdminRoute } from './components/AdminRoute';
 
 export default function App() {
   return (
@@ -33,6 +35,15 @@ export default function App() {
       />
 
       <Route path="/g/:token" element={<PublicGalleryPage />} />
+
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminPage />
+          </AdminRoute>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

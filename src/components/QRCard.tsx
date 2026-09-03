@@ -89,7 +89,7 @@ export function QRCard({ label, qrDataUrl, galleryUrl, token, onRevoke, onDelete
       <ConfirmDialog
         open={confirmingDelete}
         title={`Delete "${label}"?`}
-        message="This cannot be undone — the QR code will stop working immediately."
+        message="This cannot be undone: the QR code will stop working immediately."
         confirmLabel="Delete"
         onConfirm={confirmDelete}
         onCancel={() => setConfirmingDelete(false)}
