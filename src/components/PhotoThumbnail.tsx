@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { GalleryPhoto } from '../types';
 import { frameNumber } from '../utils/format';
+import { DownloadIcon } from './DownloadIcon';
 
 interface Props {
   photo: GalleryPhoto;
@@ -9,18 +10,27 @@ interface Props {
   selecting?: boolean;
   selected?: boolean;
   onToggleSelect?: (photo: GalleryPhoto) => void;
+  onDownload?: (photo: GalleryPhoto) => void;
 }
 
 // Grid cell: loads only thumbnailUrl, never larger sizes, to keep the grid lightweight.
-export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect }: Props) {
+export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect, onDownload }: Props) {
   const [loaded, setLoaded] = useState(false);
   const aspect = photo.width && photo.height ? photo.width / photo.height : 1;
+  const activate = () => (selecting ? onToggleSelect?.(photo) : onOpen(photo, index));
 
   return (
-    <button
-      type="button"
-      onClick={() => (selecting ? onToggleSelect?.(photo) : onOpen(photo, index))}
-      className={`group relative block w-full overflow-hidden rounded-card bg-hairline/40 focus-visible:outline-mark ${
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={activate}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          activate();
+        }
+      }}
+      className={`group relative block w-full cursor-pointer overflow-hidden rounded-card bg-hairline/40 focus-visible:outline-mark ${
         selected ? 'ring-2 ring-mark ring-offset-2 ring-offset-paper' : ''
       }`}
       style={{ aspectRatio: aspect }}
@@ -51,6 +61,20 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
       <span className="frame-tag pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 py-0.5 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
         {frameNumber(index)}
       </span>
-    </button>
+      {!selecting && onDownload && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload(photo);
+          }}
+          aria-label={`Download photo ${frameNumber(index)}`}
+          title="Download"
+          className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/75 group-hover:opacity-100 focus-visible:opacity-100"
+        >
+          <DownloadIcon className="h-4 w-4" />
+        </button>
+      )}
+    </div>
   );
 }

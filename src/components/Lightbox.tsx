@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { GalleryPhoto } from '../types';
 import { frameNumber, formatDateTime } from '../utils/format';
+import { DownloadIcon } from './DownloadIcon';
 
 interface Props {
   photos: GalleryPhoto[];
@@ -58,9 +59,11 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
             <button
               type="button"
               onClick={() => onDownload(photo)}
-              className="rounded-card border border-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10"
+              aria-label="Download original"
+              title="Download original"
+              className="rounded-card border border-white/20 p-2 text-white hover:bg-white/10"
             >
-              Download original
+              <DownloadIcon className="h-4 w-4" />
             </button>
           )}
           <button

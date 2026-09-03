@@ -14,6 +14,7 @@ interface Props {
   selecting?: boolean;
   selectedIds?: Set<string>;
   onToggleSelect?: (photo: GalleryPhoto) => void;
+  onDownload?: (photo: GalleryPhoto) => void;
 }
 
 export function PhotoGrid({
@@ -27,6 +28,7 @@ export function PhotoGrid({
   selecting,
   selectedIds,
   onToggleSelect,
+  onDownload,
 }: Props) {
   const sentinelRef = useInfiniteScrollTrigger(onLoadMore, hasMore && !loading);
 
@@ -61,6 +63,7 @@ export function PhotoGrid({
             selecting={selecting}
             selected={selectedIds?.has(photo.id)}
             onToggleSelect={onToggleSelect}
+            onDownload={onDownload}
           />
         ))}
       </div>

@@ -95,3 +95,53 @@ src/
 ├── config.ts     single place import.meta.env is read
 └── App.tsx       routes
 ```
+Let's check that first. Run:
+
+cd /projects/apps/photodrop/frontend
+sudo ls -la dist
+
+Then:
+
+sudo cat dist/.htaccess
+If .htaccess does not exist
+
+Create it:
+
+sudo nano /projects/apps/photodrop/frontend/dist/.htaccess
+
+Put this inside:
+
+RewriteEngine On
+
+# Don't rewrite existing files or directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Send all other routes to React
+RewriteRule ^ index.html [L]
+
+Save with:
+
+Ctrl + O
+Enter
+Ctrl + X
+
+Then verify Apache configuration:
+
+sudo apache2ctl configtest
+
+Expected:
+
+Syntax OK
+
+Then reload:
+
+sudo systemctl reload apache2
+Test immediately
+
+First:
+
+curl -I https://photodrop.stawisociallab.com/
+
+Then:

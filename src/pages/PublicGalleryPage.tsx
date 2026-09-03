@@ -46,8 +46,17 @@ export function PublicGalleryPage() {
 
   async function handleDownload(photo: GalleryPhoto) {
     if (!token) return;
-    const { url } = await galleryApi.getDownloadUrl(token, photo.id, 'original');
-    window.open(url, '_blank');
+    // Opened synchronously on click so browsers don't treat it as a blocked
+    // popup once the URL fetch below resolves asynchronously.
+    const downloadWindow = window.open('', '_blank');
+    try {
+      const { url } = await galleryApi.getDownloadUrl(token, photo.id, 'original');
+      if (downloadWindow) downloadWindow.location.href = url;
+      else window.location.href = url;
+    } catch (err) {
+      downloadWindow?.close();
+      throw err;
+    }
   }
 
   const displayedItems = mode === 'find-by-time' && timeResults ? timeResults : gallery.items;
@@ -133,6 +142,7 @@ export function PublicGalleryPage() {
             hasMore={mode === 'browse' ? gallery.hasMore : false}
             onLoadMore={gallery.loadMore}
             onOpen={(_photo, i) => setLightboxIndex(i)}
+            onDownload={handleDownload}
             emptyLabel={mode === 'find-by-time' ? 'No photos found in that window' : 'No photos yet'}
           />
         )}
