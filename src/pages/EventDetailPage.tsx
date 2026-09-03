@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { UploadManager } from '../components/UploadManager';
@@ -12,6 +12,7 @@ import { EventSummary, AccessTokenSummary, IssuedAccess, ProcessingSummary, Gall
 
 type Tab = 'upload' | 'access' | 'photos';
 const PAGE_SIZE_OPTIONS = [20, 40, 60, 100, 150];
+const MAX_SUMMARY_FAILURES = 5;
 
 export function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -20,6 +21,8 @@ export function EventDetailPage() {
   const [tokens, setTokens] = useState<AccessTokenSummary[]>([]);
   const [issuedByTokenId, setIssuedByTokenId] = useState<Record<string, IssuedAccess>>({});
   const [summary, setSummary] = useState<ProcessingSummary | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const summaryFailuresRef = useRef(0);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [pageSize, setPageSize] = useState(60);
@@ -43,8 +46,15 @@ export function EventDetailPage() {
 
   const loadSummary = useCallback(async () => {
     if (!eventId) return;
-    const res = await eventsApi.processingSummary(eventId);
-    setSummary(res.summary);
+    try {
+      const res = await eventsApi.processingSummary(eventId);
+      setSummary(res.summary);
+      setSummaryError(null);
+      summaryFailuresRef.current = 0;
+    } catch (err) {
+      summaryFailuresRef.current += 1;
+      setSummaryError(err instanceof Error ? err.message : 'Could not check processing status.');
+    }
   }, [eventId]);
 
   useEffect(() => {
@@ -54,14 +64,30 @@ export function EventDetailPage() {
   }, [loadEvent, loadTokens, loadSummary]);
 
   // Poll processing status while anything is still uploaded/processing —
-  // this is the data source for the "3,421 / 5,000 processed" bar.
+  // this is the data source for the "3,421 / 5,000 processed" bar. Gives up
+  // after repeated consecutive failures (server down, request timing out,
+  // etc.) instead of retrying forever with nothing shown to the user — see
+  // summaryError / retrySummary below for how polling resumes.
   useEffect(() => {
     if (!summary) return;
     const pending = summary.uploaded + summary.processing;
     if (pending === 0) return;
-    const id = setInterval(loadSummary, 4000);
+    if (summaryFailuresRef.current >= MAX_SUMMARY_FAILURES) return;
+    const id = setInterval(() => {
+      if (summaryFailuresRef.current >= MAX_SUMMARY_FAILURES) {
+        clearInterval(id);
+        return;
+      }
+      loadSummary();
+    }, 4000);
     return () => clearInterval(id);
   }, [summary, loadSummary]);
+
+  const retrySummary = useCallback(() => {
+    summaryFailuresRef.current = 0;
+    setSummaryError(null);
+    loadSummary();
+  }, [loadSummary]);
 
   const fetchPage = useCallback(
     (cursor?: string) => eventsApi.listPhotos(eventId!, cursor, pageSize),
@@ -213,6 +239,20 @@ export function EventDetailPage() {
                 }}
               />
             </div>
+            {summaryError && (
+              <div className="mt-3 flex items-center justify-between gap-3 text-sm text-red-600">
+                <span>
+                  {summaryFailuresRef.current >= MAX_SUMMARY_FAILURES
+                    ? `Lost touch with the server while checking progress (${summaryError}). Auto-refresh stopped.`
+                    : `Couldn't reach the server to check progress (${summaryError}). Retrying…`}
+                </span>
+                {summaryFailuresRef.current >= MAX_SUMMARY_FAILURES && (
+                  <button type="button" className="btn-secondary shrink-0" onClick={retrySummary}>
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
