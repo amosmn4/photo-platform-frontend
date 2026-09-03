@@ -29,6 +29,8 @@ export function UploadManager({ eventId, onBatchStarted, onAllUploaded }: Props)
     : 0;
   const doneCount = files.filter((f) => f.status === 'done').length;
   const errorCount = files.filter((f) => f.status === 'error').length;
+  const pendingCount = files.length - doneCount;
+  const allDone = files.length > 0 && pendingCount === 0;
 
   const handleFilesSelected = useCallback((selected: FileList | null) => {
     if (!selected) return;
@@ -111,8 +113,13 @@ export function UploadManager({ eventId, onBatchStarted, onAllUploaded }: Props)
           <button type="button" className="btn-secondary" onClick={() => inputRef.current?.click()} disabled={isUploading}>
             Choose files
           </button>
-          <button type="button" className="btn-primary" onClick={startUpload} disabled={files.length === 0 || isUploading}>
-            {isUploading ? 'Uploading…' : `Upload ${files.length || ''}`.trim()}
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={startUpload}
+            disabled={files.length === 0 || isUploading || allDone}
+          >
+            {allDone ? 'All uploaded' : `Upload ${pendingCount || ''}`.trim()}
           </button>
         </div>
       </div>

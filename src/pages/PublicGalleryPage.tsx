@@ -133,6 +133,7 @@ export function PublicGalleryPage() {
             hasMore={mode === 'browse' ? gallery.hasMore : false}
             onLoadMore={gallery.loadMore}
             onOpen={(_photo, i) => setLightboxIndex(i)}
+            onDownload={handleDownload}
             emptyLabel={mode === 'find-by-time' ? 'No photos found in that window' : 'No photos yet'}
           />
         )}
