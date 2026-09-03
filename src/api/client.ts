@@ -18,15 +18,48 @@ export function getAccessToken() {
   return accessToken;
 }
 
+// The access token is short-lived (15min by default — see JWT_ACCESS_TTL) so
+// any session left open longer than that needs a silent refresh, not a hard
+// failure. Concurrent 401s share one in-flight refresh instead of each
+// firing their own.
+let refreshPromise: Promise<boolean> | null = null;
+
+async function tryRefresh(): Promise<boolean> {
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      try {
+        const res = await fetch(`${config.apiBaseUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        if (!res.ok) return false;
+        const body = await res.json().catch(() => null);
+        if (!body?.accessToken) return false;
+        setAccessToken(body.accessToken);
+        return true;
+      } catch {
+        return false;
+      } finally {
+        refreshPromise = null;
+      }
+    })();
+  }
+  return refreshPromise;
+}
+
 /**
  * Every network call in the app goes through this function. It:
  *  - attaches the JWT if we have one
  *  - always sends cookies (refresh token) for same-origin/CORS-credentialed calls
+ *  - on a 401, silently refreshes the access token (via the httpOnly refresh
+ *    cookie) and retries once before giving up — otherwise a long-open tab
+ *    starts failing every request the moment the access token expires
  *  - normalizes error responses into ApiClientError
  *  - JSON-parses only when there's a JSON body (204s, redirects to signed
  *    URLs, etc. are common in this app)
  */
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(path: string, init: RequestInit = {}, isRetry = false): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('Content-Type', 'application/json');
   if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
@@ -36,6 +69,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers,
     credentials: 'include',
   });
+
+  if (res.status === 401 && !isRetry && path !== '/auth/refresh') {
+    if (await tryRefresh()) return request<T>(path, init, true);
+  }
 
   if (res.status === 204) return undefined as T;
 
