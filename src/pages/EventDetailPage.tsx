@@ -6,12 +6,26 @@ import { QRCard } from '../components/QRCard';
 import { PhotoGrid } from '../components/PhotoGrid';
 import { Lightbox } from '../components/Lightbox';
 import { ConfirmDialog } from '../components/ConfirmDialog';
+import { GuestUploadsCard } from '../components/GuestUploadsCard';
+import { GuestList, BlockGuestDialog } from '../components/GuestList';
+import { ArchiveStatus, isArchiveActive } from '../components/DownloadToolbar';
+import { useArchiveDownload } from '../hooks/useArchiveDownload';
 import { useGallery } from '../hooks/useGallery';
-import { eventsApi } from '../api/events';
+import { eventsApi, MediaFilter } from '../api/events';
 import { EventSummary, AccessTokenSummary, IssuedAccess, ProcessingSummary, GalleryPhoto } from '../types';
 
 type Tab = 'upload' | 'access' | 'photos';
 const PAGE_SIZE_OPTIONS = [20, 40, 60, 100, 150];
+// Mirrors the server's MAX_ARCHIVE_FILES default; the server enforces the real limit.
+const MAX_DOWNLOAD_FILES = 500;
+
+type PhotoFilter = 'all' | 'mine' | 'guests' | 'moments';
+const PHOTO_FILTERS: { id: PhotoFilter; label: string; filter: MediaFilter }[] = [
+  { id: 'all', label: 'All', filter: {} },
+  { id: 'mine', label: 'My photos', filter: { source: 'owner', type: 'photo' } },
+  { id: 'guests', label: 'Guest photos', filter: { source: 'guest', type: 'photo' } },
+  { id: 'moments', label: 'Moments', filter: { type: 'video' } },
+];
 const MAX_SUMMARY_FAILURES = 5;
 
 export function EventDetailPage() {
@@ -26,6 +40,9 @@ export function EventDetailPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [pageSize, setPageSize] = useState(60);
+  const [photoFilter, setPhotoFilter] = useState<PhotoFilter>('all');
+  const [blockingFrom, setBlockingFrom] = useState<GalleryPhoto | null>(null);
+  const [guestListVersion, setGuestListVersion] = useState(0);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -87,16 +104,22 @@ export function EventDetailPage() {
   }, [loadSummary]);
 
   const fetchPage = useCallback(
-    (cursor?: string) => eventsApi.listPhotos(eventId!, cursor, pageSize),
-    [eventId, pageSize],
+    (cursor?: string) =>
+      eventsApi.listPhotos(eventId!, cursor, pageSize, PHOTO_FILTERS.find((f) => f.id === photoFilter)!.filter),
+    [eventId, pageSize, photoFilter],
   );
-  const gallery = useGallery({ fetchPage, resetKey: `${eventId}-${pageSize}` });
+  const gallery = useGallery({ fetchPage, resetKey: `${eventId}-${pageSize}-${photoFilter}` });
+
+  const downloads = useArchiveDownload({
+    create: (body) => eventsApi.createArchive(eventId!, body),
+    status: (id) => eventsApi.archiveStatus(eventId!, id),
+  });
 
   function toggleSelect(photo: GalleryPhoto) {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(photo.id)) next.delete(photo.id);
-      else next.add(photo.id);
+      else if (next.size < MAX_DOWNLOAD_FILES) next.add(photo.id);
       return next;
     });
   }
@@ -106,22 +129,27 @@ export function EventDetailPage() {
     setSelectedIds(new Set());
   }
 
-  async function downloadSelected() {
+  function downloadSelected() {
     if (!eventId || selectedIds.size === 0) return;
-    setBulkBusy(true);
-    try {
-      for (const photoId of selectedIds) {
-        const { url } = await eventsApi.getPhotoDownloadUrl(eventId, photoId);
-        const a = document.createElement('a');
-        a.href = url;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        await new Promise((r) => setTimeout(r, 400));
-      }
-    } finally {
-      setBulkBusy(false);
+    downloads.start({ photoIds: [...selectedIds] });
+    cancelSelection();
+  }
+
+  function downloadAll() {
+    const { filter } = PHOTO_FILTERS.find((f) => f.id === photoFilter)!;
+    downloads.start({ all: true, source: filter.source, type: filter.type });
+  }
+
+  async function confirmBlockUploader(removeUploads: boolean) {
+    const photo = blockingFrom;
+    setBlockingFrom(null);
+    if (!eventId || !photo?.guestUploaderId) return;
+    await eventsApi.blockGuest(eventId, photo.guestUploaderId, removeUploads);
+    setLightboxIndex(null);
+    setGuestListVersion((v) => v + 1);
+    if (removeUploads) {
+      await gallery.reload();
+      await loadEvent();
     }
   }
 
@@ -307,6 +335,15 @@ export function EventDetailPage() {
 
           {tab === 'access' && (
             <div>
+              <GuestUploadsCard event={event} onChange={setEvent} />
+              <GuestList
+                eventId={event.id}
+                version={guestListVersion}
+                onUploadsRemoved={() => {
+                  gallery.reload();
+                  loadEvent();
+                }}
+              />
               <div className="mb-4 flex justify-end">
                 <button type="button" className="btn-primary" onClick={issueNewToken}>
                   Generate new QR
@@ -366,7 +403,21 @@ export function EventDetailPage() {
           {tab === 'photos' && (
             <>
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex rounded-card border border-hairline bg-paper-raised p-1">
+                    {PHOTO_FILTERS.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setPhotoFilter(f.id)}
+                        className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
+                          photoFilter === f.id ? 'bg-mark text-white' : 'text-ink-soft hover:text-ink'
+                        }`}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
                   <label className="frame-tag text-ink-faint" htmlFor="pageSize">Show</label>
                   <select
                     id="pageSize"
@@ -383,19 +434,32 @@ export function EventDetailPage() {
                 </div>
 
                 {!selecting ? (
-                  <button type="button" className="btn-secondary text-sm" onClick={() => setSelecting(true)}>
-                    Select photos
-                  </button>
-                ) : (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="frame-tag text-ink-faint">{selectedIds.size} selected</span>
+                    <button type="button" className="btn-secondary text-sm" onClick={() => setSelecting(true)}>
+                      Select photos
+                    </button>
                     <button
                       type="button"
                       className="btn-secondary text-sm"
-                      disabled={selectedIds.size === 0 || bulkBusy}
+                      disabled={downloads.busy || gallery.items.length === 0}
+                      onClick={downloadAll}
+                      title={`Downloads up to ${MAX_DOWNLOAD_FILES}, newest first`}
+                    >
+                      Download all
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="frame-tag text-ink-faint">
+                      {selectedIds.size} selected{selectedIds.size >= MAX_DOWNLOAD_FILES ? ` · ${MAX_DOWNLOAD_FILES} max` : ''}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-secondary text-sm"
+                      disabled={selectedIds.size === 0 || bulkBusy || downloads.busy}
                       onClick={downloadSelected}
                     >
-                      {bulkBusy ? 'Working…' : 'Download'}
+                      Download
                     </button>
                     <button
                       type="button"
@@ -412,6 +476,19 @@ export function EventDetailPage() {
                 )}
               </div>
 
+              {isArchiveActive(downloads) && (
+                <div className="card mb-4 flex flex-wrap items-center gap-2 px-4 py-3">
+                  <ArchiveStatus
+                    archive={downloads.archive}
+                    error={downloads.error}
+                    starting={downloads.starting}
+                    maxFiles={MAX_DOWNLOAD_FILES}
+                    onSave={downloads.save}
+                    onDismiss={downloads.dismiss}
+                  />
+                </div>
+              )}
+
               <PhotoGrid
                 items={gallery.items}
                 loading={gallery.loading}
@@ -419,7 +496,7 @@ export function EventDetailPage() {
                 hasMore={gallery.hasMore}
                 onLoadMore={gallery.loadMore}
                 onOpen={(_photo, i) => setLightboxIndex(i)}
-                emptyLabel="No processed photos yet"
+                emptyLabel={photoFilter === 'moments' ? 'No moments yet' : 'No processed photos yet'}
                 selecting={selecting}
                 selectedIds={selectedIds}
                 onToggleSelect={toggleSelect}
@@ -430,12 +507,19 @@ export function EventDetailPage() {
                   index={lightboxIndex}
                   onClose={() => setLightboxIndex(null)}
                   onIndexChange={setLightboxIndex}
+                  onBlockUploader={setBlockingFrom}
                 />
               )}
             </>
           )}
         </div>
       </main>
+
+      <BlockGuestDialog
+        open={blockingFrom !== null}
+        onBlock={confirmBlockUploader}
+        onCancel={() => setBlockingFrom(null)}
+      />
 
       <ConfirmDialog
         open={confirmingRemoveSelected}

@@ -21,6 +21,23 @@ export function formatDateTime(iso: string | null): string {
   });
 }
 
+// Clip length badge: 0:07, 1:00.
+export function formatDuration(ms: number | null): string {
+  if (!ms) return '';
+  const total = Math.round(ms / 1000);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+// Clip length limit as guests read it: "2 min", "90s".
+export function formatClipLimit(seconds: number): string {
+  return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds}s`;
+}
+
+export function formatDate(iso: string | null): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
 export function formatTime(iso: string | null): string {
   if (!iso) return '\u2014';
   return new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });

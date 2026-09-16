@@ -74,32 +74,37 @@ async function request<T>(path: string, init: RequestInit = {}, isRetry = false)
   return body as T;
 }
 
+const jsonBody = (body?: unknown) => (body ? JSON.stringify(body) : undefined);
+
+// `headers` carries per-call extras such as the public gallery's X-Guest-Key.
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: 'GET' }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'POST', body: body ? JSON.stringify(body) : undefined }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'PATCH', body: body ? JSON.stringify(body) : undefined }),
-  delete: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: 'DELETE', body: body ? JSON.stringify(body) : undefined }),
+  get: <T>(path: string, headers?: HeadersInit) => request<T>(path, { method: 'GET', headers }),
+  post: <T>(path: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(path, { method: 'POST', body: jsonBody(body), headers }),
+  patch: <T>(path: string, body?: unknown) => request<T>(path, { method: 'PATCH', body: jsonBody(body) }),
+  delete: <T>(path: string, body?: unknown, headers?: HeadersInit) =>
+    request<T>(path, { method: 'DELETE', body: jsonBody(body), headers }),
   postForm: <T>(path: string, form: FormData) => request<T>(path, { method: 'POST', body: form }),
 };
 
 // Deliberately bypasses the app server — originals upload straight to storage; uses XHR for progress.
+// contentType must match what was presigned: storage checks it as part of the signature.
 export function putFileToPresignedUrl(
   url: string,
   file: File,
-  onProgress?: (fraction: number) => void,
+  contentType: string,
+  onProgress?: (loadedBytes: number) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', url, true);
-    xhr.setRequestHeader('Content-Type', file.type);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total);
-    };
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.upload.onprogress = (e) => onProgress?.(e.loaded);
     xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)));
     xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.onabort = () => reject(new DOMException('Upload cancelled', 'AbortError'));
+    signal?.addEventListener('abort', () => xhr.abort(), { once: true });
     xhr.send(file);
   });
 }

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { GalleryPhoto } from '../types';
 import { frameNumber, formatDateTime } from '../utils/format';
 import { DownloadIcon } from './DownloadIcon';
+import { TrashIcon } from './MediaIcons';
 
 interface Props {
   photos: GalleryPhoto[];
@@ -9,10 +10,14 @@ interface Props {
   onClose: () => void;
   onIndexChange: (index: number) => void;
   onDownload?: (photo: GalleryPhoto) => void;
+  onDelete?: (photo: GalleryPhoto) => void;
+  // Owner view: stop the guest who uploaded this photo from uploading more.
+  onBlockUploader?: (photo: GalleryPhoto) => void;
 }
 
-// Progressively loads thumbnail, then medium, then large — never the original just to view a photo.
-export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: Props) {
+// Photos load thumbnail → medium → large, never the original just to view. Videos stream the
+// transcoded playback copy with the large poster frame shown until it starts.
+export function Lightbox({ photos, index, onClose, onIndexChange, onDownload, onDelete, onBlockUploader }: Props) {
   const photo = photos[index];
   const [largeLoaded, setLargeLoaded] = useState(false);
 
@@ -41,12 +46,13 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
   }, [onClose, goNext, goPrev]);
 
   if (!photo) return null;
+  const isVideo = photo.mediaType === 'video';
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Photo ${frameNumber(index)}`}
+      aria-label={`${isVideo ? 'Video' : 'Photo'} ${frameNumber(index)}`}
       className="fixed inset-0 z-50 flex flex-col bg-ink/95"
     >
       <header className="flex items-center justify-between px-4 py-3 text-white/90">
@@ -55,6 +61,26 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
           <span className="text-xs text-white/50">{formatDateTime(photo.takenAt)}</span>
         </div>
         <div className="flex items-center gap-2">
+          {onBlockUploader && photo.source === 'guest' && photo.guestUploaderId && (
+            <button
+              type="button"
+              onClick={() => onBlockUploader(photo)}
+              className="rounded-card border border-white/20 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10"
+            >
+              Block guest
+            </button>
+          )}
+          {onDelete && photo.isMine && (
+            <button
+              type="button"
+              onClick={() => onDelete(photo)}
+              aria-label="Delete your upload"
+              title="Delete"
+              className="rounded-card border border-white/20 p-2 text-white hover:bg-white/10"
+            >
+              <TrashIcon className="h-4 w-4" />
+            </button>
+          )}
           {onDownload && (
             <button
               type="button"
@@ -82,38 +108,46 @@ export function Lightbox({ photos, index, onClose, onIndexChange, onDownload }: 
           <button
             type="button"
             onClick={goPrev}
-            aria-label="Previous photo"
+            aria-label="Previous"
             className="absolute left-2 z-10 rounded-full bg-black/40 p-3 text-white hover:bg-black/60"
           >
             ‹
           </button>
         )}
 
-        <div className="relative max-h-full max-w-full">
-          {photo.mediumUrl && (
-            <img
-              src={photo.mediumUrl}
-              alt=""
-              className="max-h-[85vh] max-w-[92vw] rounded-sm object-contain"
-            />
-          )}
-          {photo.largeUrl && (
-            <img
-              src={photo.largeUrl}
-              alt=""
-              onLoad={() => setLargeLoaded(true)}
-              className={`absolute inset-0 h-full w-full rounded-sm object-contain transition-opacity duration-300 ${
-                largeLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-            />
-          )}
-        </div>
+        {isVideo ? (
+          <video
+            key={photo.id}
+            src={photo.playbackUrl ?? undefined}
+            poster={photo.largeUrl ?? photo.mediumUrl ?? undefined}
+            controls
+            autoPlay
+            playsInline
+            className="max-h-[85vh] max-w-[92vw] rounded-sm bg-black"
+          />
+        ) : (
+          <div className="relative max-h-full max-w-full">
+            {photo.mediumUrl && (
+              <img src={photo.mediumUrl} alt="" className="max-h-[85vh] max-w-[92vw] rounded-sm object-contain" />
+            )}
+            {photo.largeUrl && (
+              <img
+                src={photo.largeUrl}
+                alt=""
+                onLoad={() => setLargeLoaded(true)}
+                className={`absolute inset-0 h-full w-full rounded-sm object-contain transition-opacity duration-300 ${
+                  largeLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+              />
+            )}
+          </div>
+        )}
 
         {index < photos.length - 1 && (
           <button
             type="button"
             onClick={goNext}
-            aria-label="Next photo"
+            aria-label="Next"
             className="absolute right-2 z-10 rounded-full bg-black/40 p-3 text-white hover:bg-black/60"
           >
             ›

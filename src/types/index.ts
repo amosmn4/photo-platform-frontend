@@ -20,6 +20,30 @@ export interface EventSummary {
   total_size_bytes: string;
   created_at: string;
   coverImageUrl: string | null;
+  guest_uploads_enabled: boolean;
+  guest_uploads_until: string | null;
+}
+
+export interface GuestUploadSettings {
+  open: boolean;
+  until: string | null;
+  maxPhotoBytes: number;
+  maxVideoBytes: number;
+  maxVideoSeconds: number;
+  maxFiles: number;
+}
+
+export interface PublicEvent {
+  id: string;
+  name: string;
+  description: string | null;
+  eventDate: string | null;
+  photoCount: number;
+  photosAvailableUntil: string | null;
+  visibility: string;
+  counts: { photos: number; guests: number; moments: number };
+  guestUploads: GuestUploadSettings;
+  downloads: { maxFiles: number };
 }
 
 export interface SiteSettings {
@@ -77,9 +101,16 @@ export interface GalleryPhoto {
   takenAt: string | null;
   width: number | null;
   height: number | null;
+  mediaType: 'photo' | 'video';
+  source: 'owner' | 'guest';
+  durationMs: number | null;
+  status: 'uploaded' | 'processing' | 'ready' | 'failed';
+  isMine: boolean;
+  guestUploaderId?: string | null; // owner views only
   thumbnailUrl: string | null;
   mediumUrl: string | null;
   largeUrl: string | null;
+  playbackUrl: string | null;
 }
 
 export interface GalleryPage {
@@ -109,4 +140,53 @@ export interface PresignedUpload {
   uploadUrl: string;
   mimeType: string;
   sizeBytes: number;
+}
+
+export interface ConfirmUploadItem {
+  storageKey: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  checksumSha256?: string | null;
+}
+
+export interface ConfirmUploadResult {
+  storageKey: string;
+  status: 'created' | 'duplicate' | 'rejected';
+  photoId?: string;
+  error?: string;
+}
+
+export interface UploadFileMeta {
+  filename: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface DownloadArchive {
+  id: string;
+  status: 'queued' | 'building' | 'ready' | 'failed';
+  fileCount: number;
+  filesDone: number;
+  totalBytes: number;
+  archiveBytes: number | null;
+  expiresAt: string;
+  error: string | null;
+  url: string | null;
+  truncated?: boolean;
+}
+
+export type ArchiveRequest =
+  | { photoIds: string[] }
+  | { all: true; source?: 'owner' | 'guest'; type?: 'photo' | 'video'; sessionId?: string };
+
+export interface OwnerGuest {
+  id: string;
+  label: string;
+  photos: number;
+  videos: number;
+  bytes: number;
+  lastUploadAt: string | null;
+  blockedAt: string | null;
+  samples: { id: string; mediaType: 'photo' | 'video'; thumbnailUrl: string | null }[];
 }

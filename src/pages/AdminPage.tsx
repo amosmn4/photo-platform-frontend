@@ -6,8 +6,24 @@ import { settingsApi } from '../api/settings';
 import { AdminAccount, SiteSettings } from '../types';
 import { formatBytes } from '../utils/format';
 
-type Tab = 'accounts' | 'settings';
+type Tab = 'accounts' | 'settings' | 'docs';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'accounts', label: 'Accounts' },
+  { id: 'settings', label: 'Site settings' },
+  { id: 'docs', label: 'Docs' },
+];
 const SOCIAL_PLATFORMS = ['instagram', 'facebook', 'twitter', 'linkedin', 'youtube', 'tiktok'] as const;
+
+// Static pages in public/docs — served as plain files, so the link works for anyone without signing in.
+const DOCS = [
+  {
+    title: 'PhotoDrop at 10,000 Photos',
+    description:
+      'Guest uploads, moments, zip downloads and guest blocking, plus measured upload, download, stability and security results from the load tests.',
+    path: '/docs/performance-report.html',
+    updated: '15 Sep 2026',
+  },
+];
 
 export function AdminPage() {
   const [tab, setTab] = useState<Tab>('accounts');
@@ -17,24 +33,28 @@ export function AdminPage() {
       <Navbar />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <h1 className="font-display text-2xl font-semibold text-ink">Admin</h1>
-        <p className="text-sm text-ink-faint">Manage photographer accounts and site branding.</p>
+        <p className="text-sm text-ink-faint">Manage photographer accounts, site branding and shareable docs.</p>
 
         <nav className="mt-6 flex gap-1 border-b border-hairline">
-          {(['accounts', 'settings'] as Tab[]).map((t) => (
+          {TABS.map((t) => (
             <button
-              key={t}
+              key={t.id}
               type="button"
-              onClick={() => setTab(t)}
-              className={`px-4 py-2 text-sm font-medium capitalize transition-colors ${
-                tab === t ? 'border-b-2 border-mark text-ink' : 'text-ink-faint hover:text-ink'
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                tab === t.id ? 'border-b-2 border-mark text-ink' : 'text-ink-faint hover:text-ink'
               }`}
             >
-              {t === 'accounts' ? 'Accounts' : 'Site settings'}
+              {t.label}
             </button>
           ))}
         </nav>
 
-        <div className="mt-6">{tab === 'accounts' ? <AccountsTab /> : <SettingsTab />}</div>
+        <div className="mt-6">
+          {tab === 'accounts' && <AccountsTab />}
+          {tab === 'settings' && <SettingsTab />}
+          {tab === 'docs' && <DocsTab />}
+        </div>
       </main>
     </div>
   );
@@ -369,6 +389,93 @@ function SettingsTab() {
           {saving ? 'Saving…' : 'Save changes'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function DocsTab() {
+  const [copied, setCopied] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(DOCS[0]?.path ?? null);
+
+  async function copyLink(url: string) {
+    await navigator.clipboard.writeText(url);
+    setCopied(url);
+    setTimeout(() => setCopied((current) => (current === url ? null : current)), 1500);
+  }
+
+  async function shareLink(title: string, url: string) {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url });
+      } catch {
+        // share sheet dismissed
+      }
+      return;
+    }
+    await copyLink(url);
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-ink-faint">
+        Anyone with a doc's link can open it — no sign-in needed. Share it when someone asks how the platform performs.
+      </p>
+
+      {DOCS.map((doc) => {
+        const url = `${window.location.origin}${doc.path}`;
+        const inputId = `doc-link-${doc.path}`;
+        return (
+          <div key={doc.path} className="card p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h3 className="font-display text-lg font-semibold text-ink">{doc.title}</h3>
+                <p className="mt-1 max-w-2xl text-sm text-ink-soft">{doc.description}</p>
+                <p className="frame-tag mt-2 text-ink-faint">Updated {doc.updated}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a href={doc.path} target="_blank" rel="noopener" className="btn-primary text-sm">
+                  Open
+                </a>
+                <button type="button" className="btn-secondary text-sm" onClick={() => copyLink(url)}>
+                  {copied === url ? 'Copied' : 'Copy link'}
+                </button>
+                <button type="button" className="btn-secondary text-sm" onClick={() => shareLink(doc.title, url)}>
+                  Share
+                </button>
+              </div>
+            </div>
+
+            <label className="label mt-4" htmlFor={inputId}>
+              Share link
+            </label>
+            <input
+              id={inputId}
+              readOnly
+              className="input font-mono text-xs"
+              value={url}
+              onFocus={(e) => e.currentTarget.select()}
+            />
+
+            <div className="mt-4 flex items-center justify-between">
+              <span className="text-sm text-ink-soft">Preview</span>
+              <button
+                type="button"
+                className="btn-ghost text-sm"
+                onClick={() => setPreviewing((p) => (p === doc.path ? null : doc.path))}
+              >
+                {previewing === doc.path ? 'Hide preview' : 'Show preview'}
+              </button>
+            </div>
+            {previewing === doc.path && (
+              <iframe
+                title={`${doc.title} preview`}
+                src={doc.path}
+                className="mt-2 h-[75vh] w-full rounded-card border border-hairline bg-paper-raised"
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
