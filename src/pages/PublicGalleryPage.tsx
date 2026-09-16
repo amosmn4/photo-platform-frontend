@@ -23,10 +23,18 @@ const TAB_FILTERS: Record<Exclude<Tab, 'yours'>, GalleryFilter> = {
   moments: { type: 'video' },
 };
 
+// The Select button names what you can pick on this tab, so "Download all" isn't the only obvious route.
+const SELECT_LABELS: Record<Tab, string> = {
+  photos: 'Select photos to download',
+  guests: 'Select photos to download',
+  moments: 'Select videos to download',
+  yours: 'Select items to download',
+};
+
 const EMPTY: Record<Tab, { label: string; hint: string }> = {
   photos: { label: 'No photos yet', hint: "The photographer's photos will appear here." },
-  guests: { label: 'No guest photos yet', hint: 'Photos shared by guests show up here.' },
-  moments: { label: 'No moments yet', hint: 'Short video clips from the event show up here.' },
+  guests: { label: 'No guest photos yet', hint: 'Photos guests add show up here.' },
+  moments: { label: 'No videos yet', hint: 'Videos from the event, from the photographer and guests, show up here.' },
   yours: { label: 'Nothing uploaded yet', hint: 'Photos and clips you add will show up here.' },
 };
 
@@ -111,7 +119,7 @@ export function PublicGalleryPage() {
 
   const maxDownloadFiles = event?.downloads.maxFiles ?? 500;
   const downloads = useArchiveDownload({
-    create: (body) => galleryApi.createArchive(token!, body),
+    create: (body) => galleryApi.createArchive(token!, body, guestKey),
     status: (id) => galleryApi.archiveStatus(token!, id),
   });
 
@@ -136,8 +144,9 @@ export function PublicGalleryPage() {
   }
 
   function downloadAll() {
-    if (tab === 'yours') return;
-    downloads.start({ all: true, ...TAB_FILTERS[tab], sessionId: tab === 'photos' ? selectedSession : undefined });
+    // On "Yours" this means everything this browser uploaded; elsewhere, the tab the visitor is looking at.
+    if (tab === 'yours') downloads.start({ all: true, mine: true });
+    else downloads.start({ all: true, ...TAB_FILTERS[tab], sessionId: tab === 'photos' ? selectedSession : undefined });
   }
 
   function switchTab(next: Tab) {
@@ -203,8 +212,8 @@ export function PublicGalleryPage() {
   const counts = event?.counts ?? { photos: 0, guests: 0, moments: 0 };
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: 'photos', label: 'Photos', count: counts.photos },
-    ...(uploadsOpen || counts.guests > 0 ? [{ id: 'guests' as Tab, label: 'Guests', count: counts.guests }] : []),
-    ...(uploadsOpen || counts.moments > 0 ? [{ id: 'moments' as Tab, label: 'Moments', count: counts.moments }] : []),
+    ...(uploadsOpen || counts.guests > 0 ? [{ id: 'guests' as Tab, label: 'Guest photos', count: counts.guests }] : []),
+    ...(uploadsOpen || counts.moments > 0 ? [{ id: 'moments' as Tab, label: 'Videos', count: counts.moments }] : []),
     ...(hasOwnUploads ? [{ id: 'yours' as Tab, label: 'Yours' }] : []),
   ];
   const displayedItems = findByTime && timeResults ? timeResults : gallery.items;
@@ -297,8 +306,9 @@ export function PublicGalleryPage() {
           <DownloadToolbar
             selecting={selecting}
             selectedCount={selectedIds.size}
+            selectLabel={SELECT_LABELS[tab]}
             maxFiles={maxDownloadFiles}
-            allowDownloadAll={tab !== 'yours' && !findByTime}
+            allowDownloadAll={!findByTime && (tab !== 'yours' || Boolean(guestKey))}
             totalInView={tab === 'yours' ? undefined : counts[tab]}
             archive={downloads.archive}
             error={downloads.error}
