@@ -3,11 +3,27 @@
 React + TypeScript (Vite) client. Two audiences, one app:
 
 - **Photographer dashboard** (`/`, `/events/:eventId`) — create events, bulk
-  upload thousands of photos with live progress, issue/revoke QR codes,
-  browse the processed gallery.
+  upload thousands of photos and videos with live progress, issue/revoke QR
+  codes, switch guest uploads on until a date, browse the processed gallery
+  (filter: all / my photos / guest photos / moments).
 - **Public gallery** (`/g/:token`) — what a scanned QR code opens. No login.
-  Infinite-scroll photo grid, "find my photos by time," lightbox preview,
+  Tabs for **Photos** (photographer), **Guests** (photos guests added),
+  **Moments** (short clips) and **Yours**. When the photographer has guest
+  uploads open, one button — "Add your photos & videos" — opens the picker and
+  uploads straight away; guests can delete their own uploads (a per-browser
+  guest key in `localStorage` proves ownership) and nobody else's.
+  Infinite-scroll grid, "find my photos by time," lightbox with video playback,
   original-quality download.
+
+Both uploaders share `src/utils/uploadQueue.ts`: parallel direct-to-storage
+PUTs, presigned URLs fetched a chunk at a time just before use, batched
+confirms, and automatic retries.
+
+**Shareable docs** live in `public/docs/` as self-contained HTML pages and are
+served as plain files (e.g. `/docs/performance-report.html`), so a link works
+for anyone without signing in. Admins find them under **Admin → Docs**, with
+Open / Copy link / Share and a preview. To add one, drop the file in
+`public/docs/` and add an entry to `DOCS` in `src/pages/AdminPage.tsx`.
 
 The app name shown in the UI is read from `VITE_APP_NAME` in `.env` — change
 it there, not in code. (Backend setup/commands live in `backend/DEPLOYMENT.md`;

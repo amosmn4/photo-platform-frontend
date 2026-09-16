@@ -15,6 +15,8 @@ interface Props {
   selectedIds?: Set<string>;
   onToggleSelect?: (photo: GalleryPhoto) => void;
   onDownload?: (photo: GalleryPhoto) => void;
+  onDelete?: (photo: GalleryPhoto) => void;
+  emptyHint?: string;
 }
 
 export function PhotoGrid({
@@ -29,6 +31,8 @@ export function PhotoGrid({
   selectedIds,
   onToggleSelect,
   onDownload,
+  onDelete,
+  emptyHint,
 }: Props) {
   const sentinelRef = useInfiniteScrollTrigger(onLoadMore, hasMore && !loading);
 
@@ -46,7 +50,7 @@ export function PhotoGrid({
     return (
       <div className="flex flex-col items-center justify-center gap-2 rounded-card border border-dashed border-hairline py-24 text-center">
         <p className="font-display text-lg text-ink">{emptyLabel ?? 'No photos yet'}</p>
-        <p className="text-sm text-ink-faint">Photos will appear here as soon as they're ready.</p>
+        <p className="text-sm text-ink-faint">{emptyHint ?? "Photos will appear here as soon as they're ready."}</p>
       </div>
     );
   }
@@ -64,6 +68,7 @@ export function PhotoGrid({
             selected={selectedIds?.has(photo.id)}
             onToggleSelect={onToggleSelect}
             onDownload={onDownload}
+            onDelete={onDelete}
           />
         ))}
       </div>
@@ -79,7 +84,7 @@ export function PhotoGrid({
       )}
 
       {!hasMore && items.length > 0 && (
-        <p className="frame-tag mt-6 text-center text-ink-faint">· end of gallery · {items.length} photos ·</p>
+        <p className="frame-tag mt-6 text-center text-ink-faint">· end of gallery · {items.length} items ·</p>
       )}
     </div>
   );

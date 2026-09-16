@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { GalleryPhoto } from '../types';
-import { frameNumber } from '../utils/format';
+import { formatDuration, frameNumber } from '../utils/format';
 import { DownloadIcon } from './DownloadIcon';
+import { PlayIcon, TrashIcon } from './MediaIcons';
 
 interface Props {
   photo: GalleryPhoto;
@@ -11,13 +12,23 @@ interface Props {
   selected?: boolean;
   onToggleSelect?: (photo: GalleryPhoto) => void;
   onDownload?: (photo: GalleryPhoto) => void;
+  onDelete?: (photo: GalleryPhoto) => void;
 }
 
+// Corner buttons are always visible on touch screens (no hover there) and fade in on hover elsewhere.
+const cornerButton =
+  'absolute flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white transition-opacity hover:bg-black/75 focus-visible:opacity-100 sm:h-7 sm:w-7 sm:opacity-0 sm:group-hover:opacity-100';
+
 // Grid cell: loads only thumbnailUrl, never larger sizes, to keep the grid lightweight.
-export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect, onDownload }: Props) {
+export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect, onDownload, onDelete }: Props) {
   const [loaded, setLoaded] = useState(false);
   const aspect = photo.width && photo.height ? photo.width / photo.height : 1;
-  const activate = () => (selecting ? onToggleSelect?.(photo) : onOpen(photo, index));
+  const isReady = photo.status === 'ready';
+  const activate = () => {
+    if (selecting) onToggleSelect?.(photo);
+    else if (isReady) onOpen(photo, index);
+  };
+  const label = photo.mediaType === 'video' ? 'video' : 'photo';
 
   return (
     <div
@@ -34,9 +45,9 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
         selected ? 'ring-2 ring-mark ring-offset-2 ring-offset-paper' : ''
       }`}
       style={{ aspectRatio: aspect }}
-      aria-label={selecting ? `Select photo ${frameNumber(index)}` : `Open photo ${frameNumber(index)}`}
+      aria-label={selecting ? `Select ${label} ${frameNumber(index)}` : `Open ${label} ${frameNumber(index)}`}
     >
-      {!loaded && <div className="absolute inset-0 animate-pulse bg-hairline/60" />}
+      {!loaded && isReady && <div className="absolute inset-0 animate-pulse bg-hairline/60" />}
       {photo.thumbnailUrl && (
         <img
           src={photo.thumbnailUrl}
@@ -49,6 +60,30 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
           }`}
         />
       )}
+
+      {!isReady && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-2 text-center">
+          {photo.status === 'failed' ? (
+            <>
+              <span className="text-xs font-medium text-mark">Couldn't process</span>
+              <span className="text-[11px] text-ink-faint">Remove it and try another file</span>
+            </>
+          ) : (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-hairline border-t-ink-soft" />
+              <span className="text-[11px] text-ink-faint">Processing…</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {photo.mediaType === 'video' && isReady && (
+        <span className="pointer-events-none absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-medium text-white">
+          <PlayIcon className="h-3 w-3" />
+          {formatDuration(photo.durationMs)}
+        </span>
+      )}
+
       {selecting && (
         <span
           className={`absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-semibold transition-colors ${
@@ -58,19 +93,35 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
           ✓
         </span>
       )}
-      <span className="frame-tag pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 py-0.5 text-white/90 opacity-0 transition-opacity group-hover:opacity-100">
-        {frameNumber(index)}
-      </span>
-      {!selecting && onDownload && (
+      {isReady && (
+        <span className="frame-tag pointer-events-none absolute bottom-1.5 left-1.5 hidden rounded bg-black/55 px-1.5 py-0.5 text-white/90 opacity-0 transition-opacity group-hover:opacity-100 sm:inline">
+          {frameNumber(index)}
+        </span>
+      )}
+      {!selecting && onDelete && photo.isMine && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(photo);
+          }}
+          aria-label={`Delete your ${label}`}
+          title="Delete"
+          className={`${cornerButton} right-1.5 top-1.5`}
+        >
+          <TrashIcon className="h-4 w-4" />
+        </button>
+      )}
+      {!selecting && onDownload && isReady && (
         <button
           type="button"
           onClick={(e) => {
             e.stopPropagation();
             onDownload(photo);
           }}
-          aria-label={`Download photo ${frameNumber(index)}`}
+          aria-label={`Download ${label} ${frameNumber(index)}`}
           title="Download"
-          className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity hover:bg-black/75 group-hover:opacity-100 focus-visible:opacity-100"
+          className={`${cornerButton} bottom-1.5 right-1.5`}
         >
           <DownloadIcon className="h-4 w-4" />
         </button>

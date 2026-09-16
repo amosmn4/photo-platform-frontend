@@ -14,18 +14,23 @@ export function useGallery({ fetchPage, resetKey }: UseGalleryOptions) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  // Each first-page load gets a new generation; a response from an older one (e.g. the tab the user just
+  // left) is dropped, so a slow request can never overwrite the list the user switched to.
+  const generation = useRef(0);
 
   const loadFirstPage = useCallback(async () => {
+    const current = ++generation.current;
     setLoading(true);
     setError(null);
     try {
       const page = await fetchPage(undefined);
+      if (current !== generation.current) return;
       setItems(page.items);
       setNextCursor(page.nextCursor);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load photos');
+      if (current === generation.current) setError(e instanceof Error ? e.message : 'Failed to load photos');
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
   }, [fetchPage]);
 
@@ -36,19 +41,24 @@ export function useGallery({ fetchPage, resetKey }: UseGalleryOptions) {
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || inFlight.current) return;
+    const current = generation.current;
     inFlight.current = true;
     setLoadingMore(true);
     try {
       const page = await fetchPage(nextCursor);
+      if (current !== generation.current) return;
       setItems((prev) => [...prev, ...page.items]);
       setNextCursor(page.nextCursor);
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load more photos');
+      if (current === generation.current) setError(e instanceof Error ? e.message : 'Failed to load more photos');
     } finally {
       setLoadingMore(false);
       inFlight.current = false;
     }
   }, [fetchPage, nextCursor]);
 
-  return { items, loading, loadingMore, error, hasMore: nextCursor !== null, loadMore, reload: loadFirstPage };
+  // Drops one item in place (e.g. after a delete) without refetching and losing the scroll position.
+  const removeItem = useCallback((id: string) => setItems((prev) => prev.filter((p) => p.id !== id)), []);
+
+  return { items, loading, loadingMore, error, hasMore: nextCursor !== null, loadMore, reload: loadFirstPage, removeItem };
 }
