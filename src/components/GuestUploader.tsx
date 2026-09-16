@@ -125,6 +125,10 @@ export function GuestUploader({ token, settings, onGuestKey, onUploaded }: Props
           <UploadIcon className="h-5 w-5" />
           Add your photos & videos
         </button>
+        <p className="text-sm text-ink-soft">The photos and clips you captured at this event.</p>
+        <p className="text-xs text-ink-faint">
+          Everyone with this link or QR code can see what you add.
+        </p>
         <p className="text-xs text-ink-faint">
           {settings.until ? `Open until ${formatDate(settings.until)}` : 'Open now'} · clips up to {formatClipLimit(settings.maxVideoSeconds)}
         </p>

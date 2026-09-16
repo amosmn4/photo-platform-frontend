@@ -57,8 +57,11 @@ export const galleryApi = {
   confirm: (token: string, guestKey: string, items: ConfirmUploadItem[]) =>
     api.post<{ results: ConfirmUploadResult[] }>(`/g/${token}/uploads/confirm`, { items }, guestHeaders(guestKey)),
 
-  createArchive: (token: string, body: ArchiveRequest) =>
-    api.post<{ archive: DownloadArchive }>(`/g/${token}/downloads`, body).then((r) => r.archive),
+  // The guest key goes along so "everything I uploaded" can be scoped to this browser's uploads.
+  createArchive: (token: string, body: ArchiveRequest, guestKey?: string | null) =>
+    api
+      .post<{ archive: DownloadArchive }>(`/g/${token}/downloads`, body, guestKey ? guestHeaders(guestKey) : undefined)
+      .then((r) => r.archive),
 
   archiveStatus: (token: string, archiveId: string) =>
     api.get<{ archive: DownloadArchive }>(`/g/${token}/downloads/${archiveId}`).then((r) => r.archive),

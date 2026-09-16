@@ -22,7 +22,6 @@ const cornerButton =
 // Grid cell: loads only thumbnailUrl, never larger sizes, to keep the grid lightweight.
 export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onToggleSelect, onDownload, onDelete }: Props) {
   const [loaded, setLoaded] = useState(false);
-  const aspect = photo.width && photo.height ? photo.width / photo.height : 1;
   const isReady = photo.status === 'ready';
   const activate = () => {
     if (selecting) onToggleSelect?.(photo);
@@ -30,6 +29,8 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
   };
   const label = photo.mediaType === 'video' ? 'video' : 'photo';
 
+  // Every cell is the same square, whatever shape the photo is: the grid stays even and nothing shifts
+  // as images load. The picture is cropped to fill it, and opens uncropped in the viewer.
   return (
     <div
       role="button"
@@ -41,10 +42,9 @@ export function PhotoThumbnail({ photo, index, onOpen, selecting, selected, onTo
           activate();
         }
       }}
-      className={`group relative block w-full cursor-pointer overflow-hidden rounded-card bg-hairline/40 focus-visible:outline-mark ${
+      className={`group relative block aspect-square w-full cursor-pointer overflow-hidden rounded-card bg-hairline/40 focus-visible:outline-mark ${
         selected ? 'ring-2 ring-mark ring-offset-2 ring-offset-paper' : ''
       }`}
-      style={{ aspectRatio: aspect }}
       aria-label={selecting ? `Select ${label} ${frameNumber(index)}` : `Open ${label} ${frameNumber(index)}`}
     >
       {!loaded && isReady && <div className="absolute inset-0 animate-pulse bg-hairline/60" />}

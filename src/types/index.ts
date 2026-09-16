@@ -178,7 +178,7 @@ export interface DownloadArchive {
 
 export type ArchiveRequest =
   | { photoIds: string[] }
-  | { all: true; source?: 'owner' | 'guest'; type?: 'photo' | 'video'; sessionId?: string };
+  | { all: true; mine?: true; source?: 'owner' | 'guest'; type?: 'photo' | 'video'; sessionId?: string };
 
 export interface OwnerGuest {
   id: string;

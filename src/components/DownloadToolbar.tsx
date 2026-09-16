@@ -67,6 +67,8 @@ export function ArchiveStatus({ archive, error, starting, maxFiles, onSave, onDi
 interface ToolbarProps extends ArchiveStatusProps {
   selecting: boolean;
   selectedCount: number;
+  // Says what tapping it lets you pick, e.g. "Select photos to download".
+  selectLabel: string;
   allowDownloadAll: boolean;
   totalInView?: number;
   onStartSelecting: () => void;
@@ -85,7 +87,7 @@ export function DownloadToolbar(props: ToolbarProps) {
     content = (
       <>
         <p className="min-w-0 flex-1 text-sm text-ink">
-          {props.selectedCount === 0 ? 'Tap photos to select' : `${props.selectedCount} selected`}
+          {props.selectedCount === 0 ? 'Tap to choose what to download' : `${props.selectedCount} selected`}
           {atLimit && <span className="text-ink-faint"> · {props.maxFiles} max</span>}
         </p>
         <button type="button" className="btn-primary text-sm" disabled={props.selectedCount === 0} onClick={props.onDownloadSelected}>
@@ -98,18 +100,19 @@ export function DownloadToolbar(props: ToolbarProps) {
       </>
     );
   } else {
+    // Easiest route first — one tap for everything here, then the pick-your-own route.
     content = (
       <>
-        <span className="min-w-0 flex-1" />
-        <button type="button" className="btn-secondary text-sm" onClick={props.onStartSelecting}>
-          Select
-        </button>
         {props.allowDownloadAll && (
           <button type="button" className="btn-secondary text-sm" onClick={props.onDownloadAll}>
             <DownloadIcon className="h-4 w-4" />
             {props.totalInView !== undefined && props.totalInView > props.maxFiles ? `Download newest ${props.maxFiles}` : 'Download all'}
           </button>
         )}
+        <button type="button" className="btn-secondary text-sm" onClick={props.onStartSelecting}>
+          {props.selectLabel}
+        </button>
+        <span className="min-w-0 flex-1" />
       </>
     );
   }
